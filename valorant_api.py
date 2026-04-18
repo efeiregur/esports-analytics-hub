@@ -45,37 +45,42 @@ class RiotAPIClient:
         if response.status_code == 200:
             match_data = response.json()
             map_name = match_data['matchInfo']['mapId']
-            
-            # Fetch agent mapping
             agent_mapping = self.get_agent_mapping()
             
+            # Find which team the player was on
+            player_team = ""
             for player in match_data['players']:
                 if player['puuid'] == puuid:
+                    player_team = player['teamId']
                     stats = player['stats']
-                    character_id = player['characterId']
-                    agent_name = agent_mapping.get(character_id, "Unknown Agent")
-                    
-                    total_headshots = 0
-                    total_shots = 0
-                    
-                    # Calculate Headshot percentage from round results
-                    if 'roundResults' in match_data:
-                        for round_res in match_data['roundResults']:
-                            for player_stat in round_res.get('playerStats', []):
-                                if player_stat['puuid'] == puuid:
-                                    for damage in player_stat.get('damage', []):
-                                        total_headshots += damage.get('headshots', 0)
-                                        total_shots += damage.get('headshots', 0) + damage.get('bodyshots', 0) + damage.get('legshots', 0)
-                    
-                    hs_percentage = round((total_headshots / max(1, total_shots)) * 100, 1) if total_shots > 0 else 0.0
-                    
-                    return {
-                        "map": map_name.split("/")[-1],
-                        "kills": stats['kills'],
-                        "deaths": stats['deaths'],
-                        "assists": stats['assists'],
-                        "agent_name": agent_name,
-                        "hs_percentage": hs_percentage
-                    }
-            return {"error": "Player not found in match data"}
-        return {"error": f"Failed to fetch match details. Status: {response.status_code}"}
+                    agent_name = agent_mapping.get(player['characterId'], "Unknown Agent")
+            
+            # Find if that team won
+            is_win = False
+            for team in match_data['teams']:
+                if team['teamId'] == player_team:
+                    is_win = team['won']
+            
+            # Headshot calculation (Keep as is)
+            total_headshots = 0
+            total_shots = 0
+            if 'roundResults' in match_data:
+                for round_res in match_data['roundResults']:
+                    for player_stat in round_res.get('playerStats', []):
+                        if player_stat['puuid'] == puuid:
+                            for damage in player_stat.get('damage', []):
+                                total_headshots += damage.get('headshots', 0)
+                                total_shots += damage.get('headshots', 0) + damage.get('bodyshots', 0) + damage.get('legshots', 0)
+            
+            hs_percentage = round((total_headshots / max(1, total_shots)) * 100, 1) if total_shots > 0 else 0.0
+            
+            return {
+                "map": map_name.split("/")[-1],
+                "kills": stats['kills'],
+                "deaths": stats['deaths'],
+                "assists": stats['assists'],
+                "agent_name": agent_name,
+                "hs_percentage": hs_percentage,
+                "is_win": is_win # New field
+            }
+        return {"error": "Failed to fetch stats"}
