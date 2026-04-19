@@ -96,6 +96,7 @@ def render_valorant_view():
 def render_cs2_view():
     st.title("Counter-Strike 2 Analytics")
     st.markdown("---")
+
     col1, col2 = st.columns(2)
     with col1:
         faceit_name = st.text_input("FaceIt Nickname")
@@ -105,23 +106,61 @@ def render_cs2_view():
     if st.button("Fetch CS2 Data"):
         if faceit_name:
             api_client = FaceItAPIClient()
-            with st.spinner("Connecting to FaceIt..."):
+            
+            with st.spinner("Connecting to FaceIt Servers..."):
                 details = api_client.get_player_details(faceit_name)
+                
                 if "error" in details:
-                    st.error(details["error"])
+                    st.error(f"API Error: {details['error']}")
                     return
                 
                 player_id = details.get("player_id")
+                real_name = details.get("nickname")
                 cs2_data = details.get("games", {}).get("cs2", {})
-                st.success(f"Player Found: {details.get('nickname')} | Level: {cs2_data.get('skill_level')} | ELO: {cs2_data.get('faceit_elo')}")
+                elo = cs2_data.get("faceit_elo", "Unranked")
+                level = cs2_data.get("skill_level", "N/A")
+                
+                st.success(f"Player Found: {real_name} | Level: {level} | ELO: {elo}")
                 
                 stats = api_client.get_player_stats(player_id)
+                
                 if "error" not in stats:
+                    st.markdown("---")
+                    st.subheader("Lifetime CS2 Metrics")
                     lifetime = stats.get("lifetime", {})
-                    m1, m2, m3 = st.columns(3)
-                    m1.metric("Avg K/D", lifetime.get("Average K/D Ratio"))
-                    m2.metric("Win Rate", f"{lifetime.get('Win Rate %')}%")
-                    m3.metric("Total Matches", lifetime.get("Matches"))
+                    m1, m2, m3, m4 = st.columns(4)
+                    m1.metric("Avg K/D", lifetime.get("Average K/D Ratio", "N/A"))
+                    m2.metric("Win Rate", f"{lifetime.get('Win Rate %', 'N/A')}%")
+                    m3.metric("Headshot %", f"{lifetime.get('Average Headshots %', 'N/A')}%")
+                    m4.metric("Total Matches", lifetime.get("Matches", "N/A"))
+
+                # İŞTE BURAYI SİLMİŞİM, GERİ GELDİ:
+                with st.spinner("Retrieving recent matches..."):
+                    history = api_client.get_player_match_history(player_id, limit=5)
+                    
+                    if history and isinstance(history, list):
+                        st.markdown("---")
+                        st.subheader("Recent Matches (Last 5 Games)")
+                        
+                        for i, match in enumerate(history):
+                            status = "🏆 WIN" if match.get("is_win") else "💀 LOSS"
+                            map_name = match.get("map", "Unknown Map")
+                            score = match.get("score", "N/A")
+                            
+                            label = f"{status} | Game {i+1} | {map_name} | Score: {score}"
+                            
+                            with st.expander(label):
+                                c1, c2, c3, c4 = st.columns(4)
+                                k = int(match.get("kills", 0))
+                                d = max(1, int(match.get("deaths", 1)))
+                                c1.metric("Kills", k)
+                                c2.metric("Deaths", d)
+                                c3.metric("K/D Ratio", round(k/d, 2))
+                                c4.metric("Headshots", match.get("headshots", "N/A"))
+                    else:
+                        st.warning("No recent match history found.")
+        else:
+            st.warning("Please enter a FaceIt Nickname.")
 
 def render_compare_view():
     st.title("Player Comparison: Valorant")
