@@ -1,14 +1,10 @@
 import streamlit as st
-api_key = st.secrets["RIOT_API_KEY"]
 import requests
-import os
-from dotenv import load_dotenv
-
-load_dotenv()
 
 class RiotAPIClient:
     def __init__(self):
-        self.api_key = os.getenv("RIOT_API_KEY")
+        # Fetching Riot API key directly from Streamlit Secrets
+        self.api_key = st.secrets["RIOT_API_KEY"]
         self.headers = {
             "X-Riot-Token": self.api_key
         }
@@ -26,7 +22,7 @@ class RiotAPIClient:
         response = requests.get(url, headers=self.headers)
         
         if response.status_code == 200:
-            # We slice the list directly here to get only the recent 'count' matches
+            # Slice the list directly here to get only the recent 'count' matches
             match_list = response.json().get('history', [])
             return [match['matchId'] for match in match_list][:count]
         return {"error": f"Match history failed with status: {response.status_code}"}
@@ -63,7 +59,7 @@ class RiotAPIClient:
                 if team['teamId'] == player_team:
                     is_win = team['won']
             
-            # Headshot calculation (Keep as is)
+            # Headshot calculation
             total_headshots = 0
             total_shots = 0
             if 'roundResults' in match_data:
@@ -83,6 +79,30 @@ class RiotAPIClient:
                 "assists": stats['assists'],
                 "agent_name": agent_name,
                 "hs_percentage": hs_percentage,
-                "is_win": is_win # New field
+                "is_win": is_win
             }
         return {"error": "Failed to fetch stats"}
+     
+    def get_esports_schedule(self):
+        """
+        Fetches live and upcoming VCT esports matches using the HenrikDev API.
+        Requires a valid HDEV API key passed in the headers.
+        """
+        url = "https://api.henrikdev.xyz/valorant/v1/esports/schedule"
+        
+        try:
+            # Fetch HenrikDev key from secrets and securely add to headers
+            henrik_key = st.secrets["HENRIK_API_KEY"]
+            henrik_headers = {
+                "Authorization": henrik_key
+            }
+            
+            response = requests.get(url, headers=henrik_headers, timeout=10)
+            
+            if response.status_code != 200:
+                return {"error": f"API Access Refused (Status: {response.status_code})"}
+            
+            return response.json().get("data", [])
+            
+        except Exception as e:
+            return {"error": f"Connection Failure: {str(e)}"}
