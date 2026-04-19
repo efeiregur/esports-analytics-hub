@@ -33,9 +33,9 @@ def render_valorant_view():
     with tab_player:
         col1, col2 = st.columns(2)
         with col1:
-            game_name = st.text_input("Riot ID (e.g. qardesh0)")
+            game_name = st.text_input("Riot ID")
         with col2:
-            tag_line = st.text_input("Tagline (without #, e.g. 1905)")
+            tag_line = st.text_input("Tagline (without #)")
 
         if st.button("Fetch Player Data"):
             if not game_name or not tag_line:
