@@ -6,7 +6,7 @@ from cs2_api import FaceItAPIClient
 def setup_page():
     st.set_page_config(
         page_title="E-Sports Analytics Hub",
-        page_icon="logo.png", # Points to your custom local image file
+        page_icon="logo.png",
         layout="wide",
         initial_sidebar_state="expanded"
     )
