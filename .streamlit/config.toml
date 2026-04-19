@@ -1,0 +1,12 @@
+[theme]
+primaryColor = "#FF4B4B"
+
+backgroundColor = "#0E1117"
+
+# Secondary background for sidebar and UI containers
+secondaryBackgroundColor = "#262730"
+
+# Off-white text to reduce eye strain
+textColor = "#FAFAFA"
+
+font = "sans serif"
