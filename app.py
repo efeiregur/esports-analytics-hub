@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 from valorant_api import RiotAPIClient
+from cs2_api import FaceItAPIClient
 
 def setup_page():
     st.set_page_config(
@@ -108,9 +109,61 @@ def render_valorant_view():
                         c5.metric("HS %", f"{stats['hs_percentage']}%")
 
 def render_cs2_view():
-    st.title("CS2 Tournament Stats")
+    st.title("Counter-Strike 2 Analytics")
     st.markdown("---")
-    st.info("CS2 Analytics Module is under development.")
+
+    # FaceIt API doğrudan "Nickname" üzerinden arama yapar
+    col1, col2 = st.columns(2)
+    with col1:
+        faceit_name = st.text_input("FaceIt Nickname (e.g. s1mple)")
+    with col2:
+        platform = st.selectbox("Platform", ["FaceIt (Official)"])
+
+    if st.button("Fetch CS2 Data"):
+        if faceit_name:
+            with st.spinner("Connecting to FaceIt Servers..."):
+                api_client = FaceItAPIClient()
+                
+                # 1. Aşama: Oyuncu kimliğini ve ELO'sunu bul
+                details = api_client.get_player_details(faceit_name)
+                
+                if "error" in details:
+                    st.error(f"API Error: {details['error']}")
+                    st.info("Tip: FaceIt nicknames are case-sensitive. Make sure you typed it exactly right.")
+                    return
+                
+                player_id = details.get("player_id")
+                real_name = details.get("nickname")
+                
+                # ELO ve Level bilgilerini ayıkla
+                cs2_data = details.get("games", {}).get("cs2", {})
+                elo = cs2_data.get("faceit_elo", "Unranked")
+                level = cs2_data.get("skill_level", "N/A")
+                
+                st.success(f"Player Found: {real_name} | FaceIt Level: {level} | ELO: {elo}")
+                
+                # 2. Aşama: O gizli ID ile istatistikleri çek
+                with st.spinner("Analyzing lifetime stats..."):
+                    stats = api_client.get_player_stats(player_id)
+                    
+                    if "error" in stats:
+                        st.warning("Player found, but CS2 stats are missing or private.")
+                        return
+                    
+                    st.markdown("---")
+                    st.subheader(f"Lifetime CS2 Metrics")
+                    
+                    # FaceIt verilerini 'lifetime' sözlüğünün içinden alıyoruz
+                    lifetime = stats.get("lifetime", {})
+                    
+                    m1, m2, m3, m4 = st.columns(4)
+                    m1.metric("Average K/D", lifetime.get("Average K/D Ratio", "N/A"))
+                    m2.metric("Win Rate", f"{lifetime.get('Win Rate %', 'N/A')}%")
+                    m3.metric("Headshot %", f"{lifetime.get('Average Headshots %', 'N/A')}%")
+                    m4.metric("Total Matches", lifetime.get("Matches", "N/A"))
+
+        else:
+            st.warning("Please enter a valid FaceIt Nickname.")
 
 def main():
     setup_page()

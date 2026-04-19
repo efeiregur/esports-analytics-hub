@@ -1,3 +1,5 @@
+import streamlit as st
+api_key = st.secrets["RIOT_API_KEY"]
 import requests
 import os
 from dotenv import load_dotenv
