@@ -17,15 +17,29 @@ class RiotAPIClient:
             return response.json()
         return {"error": f"Connection failed with status: {response.status_code}"}
 
-    def get_match_history(self, puuid, count=5):
-        url = f"https://europe.api.riotgames.com/val/match/v1/matchlists/by-puuid/{puuid}"
-        response = requests.get(url, headers=self.headers)
+    def get_match_history(self, game_name, tag_line, count=5):
+        """
+        Fetches match history using HenrikDev v3 (by-name) which is more reliable 
+        for development keys.
+        """
+        # We use name and tag instead of PUUID for better stability
+        url = f"https://api.henrikdev.xyz/valorant/v3/matches/eu/{game_name}/{tag_line}"
         
-        if response.status_code == 200:
-            # Slice the list directly here to get only the recent 'count' matches
-            match_list = response.json().get('history', [])
-            return [match['matchId'] for match in match_list][:count]
-        return {"error": f"Match history failed with status: {response.status_code}"}
+        headers = {
+            "Authorization": st.secrets["HENRIK_API_KEY"]
+        }
+        
+        try:
+            response = requests.get(url, headers=headers, timeout=10)
+            
+            if response.status_code == 200:
+                matches = response.json().get('data', [])
+                # Returning the full match objects so we can extract stats easily
+                return matches[:count]
+            else:
+                return {"error": f"HenrikDev Error: {response.status_code}"}
+        except Exception as e:
+            return {"error": f"Connection failed: {str(e)}"}
 
     def get_agent_mapping(self):
         # Fetches agent UUIDs to clear names mapping from a public API
